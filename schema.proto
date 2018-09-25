@@ -8,3 +8,25 @@ message PeersOutput {
   optional bytes peers = 1;
   optional bytes localPeers = 2;
 }
+
+message ImmutableKeysInput {
+  required bytes value = 1;
+  optional bytes salt = 2;
+}
+
+message ImmutableKeysOutput {
+  required bytes value = 1;
+}
+
+message MutableKeysInput {
+  required bytes key = 1;
+  optional bytes value = 2;
+  optional bytes seq = 3;
+  optional bytes signature = 4;
+}
+
+message MutableKeysOutput {
+  required bytes value = 1;
+  required uint32 seq = 2;
+  required bytes signature = 3;
+}

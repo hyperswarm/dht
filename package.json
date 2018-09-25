@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "dht-rpc": "^4.0.0",
+    "hashlru": "^2.2.1",
     "ipv4-peers": "^1.1.1",
     "protocol-buffers-encodings": "^1.1.0"
   },

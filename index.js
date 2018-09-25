@@ -2,6 +2,8 @@ const { DHT } = require('dht-rpc')
 const recordCache = require('record-cache')
 const { PeersInput, PeersOutput } = require('./messages')
 const peers = require('ipv4-peers')
+const sodium = require('sodium-universal')
+const hashlru = require('hashlru')
 
 module.exports = opts => new HyperDHT(opts)
 
@@ -14,8 +16,12 @@ class HyperDHT extends DHT {
       maxAge: 12 * 60 * 1000
     })
 
-    this._cache = cache
-    this.once('close', cache.destroy.bind(cache))
+    const immutableKeys = hashlru(1024)
+    const mutableKeys = hashlru(1024)
+
+    this._peers = peers
+    this._immutableKeys = immutableKeys
+    this._mutableKeys = mutableKeys
 
     const onpeers = this._onpeers.bind(this)
 
@@ -25,6 +31,26 @@ class HyperDHT extends DHT {
       outputEncoding: PeersOutput,
       update: onpeers,
       query: onpeers
+    })
+
+    this.command('immutable-keys', {
+      inputEncoding: ImmutableKeysInput,
+      outputEncoding: ImmutableKeysOutput,
+      update (query, cb) {
+        const value = query.value
+
+        if (value.salt && !(value.salt.length >= 16 && value.salt.length <= 32)) return cb(new Error('Invalid salt'))
+
+        const key = hash(value.value, value.salt)
+        if (!query.target.equals(key)) return cb(new Error('Invalid target'))
+
+        immutableKeys.put(key.toString('hex'), value.value)
+        cb(null)
+      },
+      query (query, cb) {
+        const value = immutableKeys.get(query.target.toString('hex'))
+        cb(null, { value })
+      }
     })
   }
 
@@ -140,4 +166,10 @@ function decodeLocalPeers (prefix, buf) {
   }
 
   return peers
+}
+
+function hash (val, salt) {
+  const out = Buffer.allocUnsafe(32)
+  sodium.crypto_generichash(out, val, salt)
+  return out
 }
