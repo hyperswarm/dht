@@ -116,6 +116,8 @@ module.exports = class HyperDHT extends DHT {
 
   async connectRaw (publicKey, opts = {}) {
     let error = null
+    let query
+    let holepunch
 
     const remoteNoisePublicKey = Buffer.alloc(32)
     const localKeyPair = opts.keyPair || (opts.secretKey ? opts : this.defaultKeyPair)
@@ -129,7 +131,7 @@ module.exports = class HyperDHT extends DHT {
     await this.sampledNAT()
 
     const addr = this.remoteAddress()
-    const holepunch = new Holepuncher(addr)
+    holepunch = new Holepuncher(addr)
     const onmessage = this.onmessage.bind(this)
 
     const localPayload = holepunch.bind()
@@ -145,7 +147,7 @@ module.exports = class HyperDHT extends DHT {
     sodium.randombytes_buf(localPayload.relayAuth)
 
     const value = cenc.encode(messages.connect, { noise: noise.send(localPayload), relayAuth: localPayload.relayAuth })
-    const query = this.query(target, 'connect', value, { socket, nodes: opts.nodes, map: mapConnect })
+    query = this.query(target, 'connect', value, { socket, nodes: opts.nodes, map: mapConnect })
 
     for await (const { from, token, connect } of query) {
       const payload = noise.recv(connect.noise, false)
